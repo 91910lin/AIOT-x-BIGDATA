@@ -32,7 +32,7 @@ time.sleep(5)
 
 # 定義目標元素的 CSS 選擇器
 target_selector = 'div.job-summary'
-max_scrolls = 2
+max_scrolls = 1
 scrolls = 0
 job_list = []
 
@@ -49,13 +49,13 @@ while scrolls < max_scrolls:
             # 獲取職缺名稱和連結
             title_element = job.find_element(By.CSS_SELECTOR, 'h2 a.info-job__text')
             job_url = title_element.get_attribute('href')
-            title = title_element.get_attribute('title')
-            print("title:", title)
-            print("job_url:", job_url)
+            job_name = title_element.get_attribute('title')
+            print("職缺名稱:", job_name)
+            print("職缺網址:", job_url)
             
             # 獲取公司名稱
             company = job.find_element(By.CSS_SELECTOR, 'a[data-gtm-joblist="職缺-公司名稱"]').text.strip()
-            print("company:", company)
+            print("公司名稱:", company)
             
             # 開啟新分頁獲取詳細資訊
             driver.execute_script(f"window.open('{job_url}', '_blank')")
@@ -88,12 +88,215 @@ while scrolls < max_scrolls:
                     applicants = "無資料"
                     print("無法獲取應徵人數")
                 
+                # 獲取工作內容
+                job_description = driver.find_element(By.CSS_SELECTOR, 'p.job-description__content').text.strip()
+                print("工作內容:", job_description)
+                
+                # 獲取職務類別
+                job_categories = driver.find_elements(By.CSS_SELECTOR, 'div.category-item u')
+                job_category = '、'.join([cat.text for cat in job_categories])
+                print("職務類別:", job_category)
+                
+                # 獲取工作待遇
+                salary = driver.find_element(By.CSS_SELECTOR, 'p.text-primary.font-weight-bold').text.strip()
+                print("工作待遇:", salary)
+                
+                # 獲取工作性質
+                job_type = driver.find_element(By.CSS_SELECTOR, 'div.list-row:nth-child(4) div.list-row__data').text.strip()
+                print("工作性質:", job_type)
+                
+                # 獲取上班地點
+                location = driver.find_element(By.CSS_SELECTOR, 'div.job-address span').text.strip()
+                print("上班地點:", location)
+                
+                # 獲取管理責任
+                management_elements = driver.find_elements(By.CSS_SELECTOR, 'div.list-row')
+                management = ""
+                for element in management_elements:
+                    try:
+                        title_text = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title_text == "管理責任":
+                            management = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("管理責任:", management)
+                
+                # 獲取出差外派
+                business_trip = ""
+                for element in management_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "出差外派":
+                            business_trip = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("出差外派:", business_trip)
+                
+                # 獲取上班時段
+                work_time = ""
+                for element in management_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "上班時段":
+                            work_time = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("上班時段:", work_time)
+                
+                # 獲取休假制度
+                vacation = ""
+                for element in management_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "休假制度":
+                            vacation = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("休假制度:", vacation)
+                
+                # 獲取可上班日
+                start_work = ""
+                for element in management_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "可上班日":
+                            start_work = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("可上班日:", start_work)
+                
+                # 獲取需求人數
+                headcount = ""
+                for element in management_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "需求人數":
+                            headcount = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("需求人數:", headcount)
+                
+                # 獲取工作經歷
+                work_exp = ""
+                work_exp_elements = driver.find_elements(By.CSS_SELECTOR, 'div.list-row')
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "工作經歷":
+                            work_exp = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("工作經歷:", work_exp)
+                
+                # 獲取學歷要求
+                education = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "學歷要求":
+                            education = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("學歷要求:", education)
+                
+                # 獲取科系要求
+                major = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "科系要求":
+                            major = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("科系要求:", major)
+                
+                # 獲取語文條件
+                language = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "語文條件":
+                            language = element.find_element(By.CSS_SELECTOR, 'div.list-row__data').text.strip()
+                            break
+                    except:
+                        continue
+                print("語文條件:", language)
+                
+                # 獲取擅長工具
+                tools = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "擅長工具":
+                            tools_elements = element.find_elements(By.CSS_SELECTOR, 'div.list-row__data u')
+                            tools = '、'.join([tool.text for tool in tools_elements])
+                            break
+                    except:
+                        continue
+                print("擅長工具:", tools)
+                
+                # 獲取工作技能
+                skills = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "工作技能":
+                            skills_elements = element.find_elements(By.CSS_SELECTOR, 'div.list-row__data u')
+                            skills = '、'.join([skill.text for skill in skills_elements])
+                            break
+                    except:
+                        continue
+                print("工作技能:", skills)
+                
+                # 獲取具備證照
+                certificates = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "具備證照":
+                            cert_elements = element.find_elements(By.CSS_SELECTOR, 'div.list-row__data u')
+                            certificates = '、'.join([cert.text for cert in cert_elements])
+                            break
+                    except:
+                        continue
+                print("具備證照:", certificates)
+                
+                # 獲取其他條件
+                other_requirements = ""
+                for element in work_exp_elements:
+                    try:
+                        title = element.find_element(By.CSS_SELECTOR, 'h3').text.strip()
+                        if title == "其他條件":
+                            other_requirements = element.find_element(By.CSS_SELECTOR, 'div.list-row__data p.r3').text.strip()
+                            break
+                    except:
+                        continue
+                print("其他條件:", other_requirements)
+                
                 # 更新要存入的資料
-                job_list.append([title, company, update_date, actively_hiring, applicants])
+                job_list.append([
+                    job_name, company, update_date, actively_hiring, applicants,
+                    job_description, job_category, salary, job_type, location,
+                    management, business_trip, work_time, vacation, start_work, headcount,
+                    work_exp, education, major, language, tools, skills, certificates, other_requirements
+                ])
                 
             except Exception as e:
                 print(f"處理詳細頁面資訊時發生錯誤: {e}")
-                job_list.append([title, company, "", "否", "無資料"])  # 如果出錯，加入預設值
+                job_list.append([
+                    job_name, company, update_date, actively_hiring, applicants,
+                    "", "", "", "", "", "", "", "", "", "", "",
+                    "", "", "", "", "", "", "", ""  # 新增欄位的空值
+                ])
             
             # 關閉詳細頁面，切回列表頁
             driver.close()
@@ -116,7 +319,12 @@ while scrolls < max_scrolls:
     scrolls += 1
 
 # 存入 CSV
-df = pd.DataFrame(job_list, columns=["職缺名稱", "公司名稱", "更新日期", "積極徵才", "應徵人數"])
+df = pd.DataFrame(job_list, columns=[
+    "職缺名稱", "公司名稱", "更新日期", "積極徵才", "應徵人數",
+    "工作內容", "職務類別", "工作待遇", "工作性質", "上班地點",
+    "管理責任", "出差外派", "上班時段", "休假制度", "可上班日", "需求人數",
+    "工作經歷", "學歷要求", "科系要求", "語文條件", "擅長工具", "工作技能", "具備證照", "其他條件"
+])
 df.to_csv("104_jobs.csv", index=False, encoding="utf-8-sig")
 print("爬取完成，已儲存為 104_jobs.csv")
 
