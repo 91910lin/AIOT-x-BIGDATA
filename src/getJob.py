@@ -54,8 +54,11 @@ while scrolls < max_scrolls:
             print("職缺網址:", job_url)
             
             # 獲取公司名稱
-            company = job.find_element(By.CSS_SELECTOR, 'a[data-gtm-joblist="職缺-公司名稱"]').text.strip()
+            company_element = job.find_element(By.CSS_SELECTOR, 'a[data-gtm-joblist="職缺-公司名稱"]')
+            company = company_element.text.strip()
+            company_url = company_element.get_attribute('href')
             print("公司名稱:", company)
+            print("公司網址:", company_url)
             
             # 開啟新分頁獲取詳細資訊
             driver.execute_script(f"window.open('{job_url}', '_blank')")
@@ -282,20 +285,62 @@ while scrolls < max_scrolls:
                         continue
                 print("其他條件:", other_requirements)
                 
-                # 更新要存入的資料
+                # 獲取福利制度
+                try:
+                    # 法定項目
+                    legal_benefits = []
+                    legal_elements = driver.find_elements(By.CSS_SELECTOR, 'div.benefits-labels:nth-child(3) span.tag--text a')
+                    legal_benefits = [item.text.strip() for item in legal_elements]
+                    legal_benefits_str = '、'.join(legal_benefits)
+                    print("法定項目:", legal_benefits_str)
+                    
+                    # 其他福利
+                    other_benefits = []
+                    other_elements = driver.find_elements(By.CSS_SELECTOR, 'div.benefits-labels:nth-child(5) span.tag--text a')
+                    other_benefits = [item.text.strip() for item in other_elements]
+                    other_benefits_str = '、'.join(other_benefits)
+                    print("其他福利:", other_benefits_str)
+                    
+                    # 未整理的福利說明
+                    raw_benefits = ""
+                    benefits_description = driver.find_element(By.CSS_SELECTOR, 'div.benefits-description p.r3').text.strip()
+                    raw_benefits = benefits_description
+                    print("未整理的福利說明:", raw_benefits)
+                    
+                except Exception as e:
+                    print(f"獲取福利制度時發生錯誤: {e}")
+                    legal_benefits_str = ""
+                    other_benefits_str = ""
+                    raw_benefits = ""
+                
+                # 獲取聯絡方式
+                try:
+                    contact_info = []
+                    contact_elements = driver.find_elements(By.CSS_SELECTOR, 'div.job-contact-table div.job-contact-table__data')
+                    contact_info = [element.text.strip() for element in contact_elements]
+                    contact_info_str = '\n'.join(contact_info)
+                    print("聯絡方式:", contact_info_str)
+                except Exception as e:
+                    print(f"獲取聯絡方式時發生錯誤: {e}")
+                    contact_info_str = ""
+                
+                # 更新要存入的資料（加入聯絡方式）
                 job_list.append([
-                    job_name, company, update_date, actively_hiring, applicants,
+                    job_name, job_url, company, company_url, update_date, actively_hiring, applicants,
                     job_description, job_category, salary, job_type, location,
                     management, business_trip, work_time, vacation, start_work, headcount,
-                    work_exp, education, major, language, tools, skills, certificates, other_requirements
+                    work_exp, education, major, language, tools, skills, certificates, 
+                    other_requirements, legal_benefits_str, other_benefits_str, raw_benefits,
+                    contact_info_str  # 新增聯絡方式
                 ])
+
                 
             except Exception as e:
                 print(f"處理詳細頁面資訊時發生錯誤: {e}")
                 job_list.append([
-                    job_name, company, update_date, actively_hiring, applicants,
+                    job_name, job_url, company, company_url, update_date, actively_hiring, applicants,
                     "", "", "", "", "", "", "", "", "", "", "",
-                    "", "", "", "", "", "", "", ""  # 新增欄位的空值
+                    "", "", "", "", "", "", "", "", "", "", "", "", "", ""  # 新增欄位的空值
                 ])
             
             # 關閉詳細頁面，切回列表頁
@@ -305,6 +350,10 @@ while scrolls < max_scrolls:
         except Exception as e:
             print(f"處理職缺時發生錯誤: {e}")
             continue
+
+        # 獲取終端寬度並打印分隔線
+        terminal_width = os.get_terminal_size().columns
+        print("=" * terminal_width)
     
     # 滾動到下一頁
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -320,10 +369,11 @@ while scrolls < max_scrolls:
 
 # 存入 CSV
 df = pd.DataFrame(job_list, columns=[
-    "職缺名稱", "公司名稱", "更新日期", "積極徵才", "應徵人數",
+    "職缺名稱", "職缺網址", "公司名稱", "公司網址", "更新日期", "積極徵才", "應徵人數",
     "工作內容", "職務類別", "工作待遇", "工作性質", "上班地點",
     "管理責任", "出差外派", "上班時段", "休假制度", "可上班日", "需求人數",
-    "工作經歷", "學歷要求", "科系要求", "語文條件", "擅長工具", "工作技能", "具備證照", "其他條件"
+    "工作經歷", "學歷要求", "科系要求", "語文條件", "擅長工具", "工作技能", "具備證照", 
+    "其他條件", "法定福利", "其他福利", "未整理福利說明", "聯絡方式"
 ])
 df.to_csv("104_jobs.csv", index=False, encoding="utf-8-sig")
 print("爬取完成，已儲存為 104_jobs.csv")
