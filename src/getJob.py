@@ -36,6 +36,49 @@ max_scrolls = 1
 scrolls = 0
 job_list = []
 
+# 檢查是否存在舊的 CSV 檔案並讀取
+def load_existing_jobs():
+    try:
+        if os.path.exists("104_jobs.csv"):
+            existing_df = pd.read_csv("104_jobs.csv", encoding="utf-8-sig")
+            # 將職缺網址作為索引
+            return existing_df.set_index("職缺網址")
+        # 如果檔案不存在，建立一個有正確欄位的空 DataFrame
+        return pd.DataFrame(columns=[
+            "職缺名稱", "公司名稱", "公司網址", "更新日期", "積極徵才", "應徵人數",
+            "工作內容", "職務類別", "工作待遇", "工作性質", "上班地點",
+            "管理責任", "出差外派", "上班時段", "休假制度", "可上班日", "需求人數",
+            "工作經歷", "學歷要求", "科系要求", "語文條件", "擅長工具", "工作技能", "具備證照", 
+            "其他條件", "法定福利", "其他福利", "未整理福利說明", "聯絡方式"
+        ])
+    except Exception as e:
+        print(f"讀取現有 CSV 檔案時發生錯誤: {e}")
+        return pd.DataFrame()
+
+# 更新或新增職缺資料
+def update_job_data(existing_df, new_data):
+    try:
+        # 將新資料轉換為 DataFrame
+        new_df = pd.DataFrame([new_data[1:]], columns=existing_df.columns)
+        new_df.index = [new_data[0]]  # 使用職缺網址作為索引
+        
+        # 如果職缺已存在，更新資料
+        if new_data[0] in existing_df.index:
+            existing_df.loc[new_data[0]] = new_df.loc[new_data[0]]
+            print(f"更新現有職缺: {new_data[0]}")
+        else:
+            # 如果是新職缺，新增一筆
+            existing_df = pd.concat([existing_df, new_df])
+            print(f"新增職缺: {new_data[0]}")
+            
+        return existing_df
+    except Exception as e:
+        print(f"更新資料時發生錯誤: {e}")
+        return existing_df
+
+# 載入現有資料
+existing_jobs = load_existing_jobs()
+
 while scrolls < max_scrolls:
     print(f"正在處理第 {scrolls + 1} 頁...")
     
@@ -324,24 +367,22 @@ while scrolls < max_scrolls:
                     print(f"獲取聯絡方式時發生錯誤: {e}")
                     contact_info_str = ""
                 
-                # 更新要存入的資料（加入聯絡方式）
-                job_list.append([
-                    job_name, job_url, company, company_url, update_date, actively_hiring, applicants,
+                # 準備要儲存的資料
+                job_data = [
+                    job_url,  # 使用職缺網址作為索引
+                    job_name, company, company_url, update_date, actively_hiring, applicants,
                     job_description, job_category, salary, job_type, location,
                     management, business_trip, work_time, vacation, start_work, headcount,
                     work_exp, education, major, language, tools, skills, certificates, 
                     other_requirements, legal_benefits_str, other_benefits_str, raw_benefits,
-                    contact_info_str  # 新增聯絡方式
-                ])
-
+                    contact_info_str
+                ]
+                
+                # 更新或新增資料
+                existing_jobs = update_job_data(existing_jobs, job_data)
                 
             except Exception as e:
                 print(f"處理詳細頁面資訊時發生錯誤: {e}")
-                job_list.append([
-                    job_name, job_url, company, company_url, update_date, actively_hiring, applicants,
-                    "", "", "", "", "", "", "", "", "", "", "",
-                    "", "", "", "", "", "", "", "", "", "", "", "", "", ""  # 新增欄位的空值
-                ])
             
             # 關閉詳細頁面，切回列表頁
             driver.close()
@@ -367,15 +408,12 @@ while scrolls < max_scrolls:
         
     scrolls += 1
 
-# 存入 CSV
-df = pd.DataFrame(job_list, columns=[
-    "職缺名稱", "職缺網址", "公司名稱", "公司網址", "更新日期", "積極徵才", "應徵人數",
-    "工作內容", "職務類別", "工作待遇", "工作性質", "上班地點",
-    "管理責任", "出差外派", "上班時段", "休假制度", "可上班日", "需求人數",
-    "工作經歷", "學歷要求", "科系要求", "語文條件", "擅長工具", "工作技能", "具備證照", 
-    "其他條件", "法定福利", "其他福利", "未整理福利說明", "聯絡方式"
-])
-df.to_csv("104_jobs.csv", index=False, encoding="utf-8-sig")
-print("爬取完成，已儲存為 104_jobs.csv")
+# 儲存更新後的資料
+try:
+    # 重設索引，將職缺網址變回一般欄位
+    existing_jobs.reset_index().to_csv("104_jobs.csv", index=False, encoding="utf-8-sig")
+    print("資料已更新並儲存至 104_jobs.csv")
+except Exception as e:
+    print(f"儲存 CSV 檔案時發生錯誤: {e}")
 
 driver.quit()
