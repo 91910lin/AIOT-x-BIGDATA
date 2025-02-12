@@ -78,7 +78,7 @@ def update_job_data(existing_df, new_data):
 
 # 載入現有資料
 existing_jobs = load_existing_jobs()
-
+old_scrolls = 0
 while scrolls < max_scrolls:
     print(f"正在處理第 {scrolls + 1} 頁...")
     
@@ -397,6 +397,7 @@ while scrolls < max_scrolls:
         print("=" * terminal_width)
     
     # 滾動到下一頁
+    old_scrolls = len
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     time.sleep(2)
     
@@ -410,8 +411,10 @@ while scrolls < max_scrolls:
 
 # 儲存更新後的資料
 try:
-    # 重設索引，將職缺網址變回一般欄位
-    existing_jobs.reset_index().to_csv("104_jobs.csv", index=False, encoding="utf-8-sig")
+    # 重設索引，將職缺網址變回一般欄位，並確保不會產生額外的 index 欄位
+    final_df = existing_jobs.reset_index()
+    final_df.columns.values[0] = "職缺網址"  # 將第一欄的名稱改為"職缺網址"
+    final_df.to_csv("104_jobs.csv", index=False, encoding="utf-8-sig")
     print("資料已更新並儲存至 104_jobs.csv")
 except Exception as e:
     print(f"儲存 CSV 檔案時發生錯誤: {e}")
