@@ -7,7 +7,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
+from datetime import datetime, timedelta
 
 # 設定 Selenium 選項
 chrome_options = Options()
@@ -32,9 +34,15 @@ time.sleep(5)
 
 # 定義目標元素的 CSS 選擇器
 target_selector = 'div.job-summary'
-max_scrolls = 1
+max_scrolls = 2
 scrolls = 0
 job_list = []
+
+# 在主程式開始前加入開始時間
+start_time = time.time()
+
+# 設定等待時間
+WAIT_TIMEOUT = 10  # 最長等待10秒
 
 # 檢查是否存在舊的 CSV 檔案並讀取
 def load_existing_jobs():
@@ -79,18 +87,34 @@ def update_job_data(existing_df, new_data):
 # 載入現有資料
 existing_jobs = load_existing_jobs()
 old_scrolls = 0
+job_count = 0
 while scrolls < max_scrolls:
     print(f"正在處理第 {scrolls + 1} 頁...")
     
-    # 獲取當前頁面的職缺
-    current_jobs = driver.find_elements(By.CSS_SELECTOR, target_selector)
-    print(f"當前頁面職缺數量: {len(current_jobs)}")
+    # 使用顯式等待替代 time.sleep
+    try:
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, target_selector))
+        )
+    except TimeoutException:
+        print("等待職缺載入超時")
+        break
     
-    # 處理當前頁面的每個職缺
-    for job in current_jobs:
+    current_jobs = driver.find_elements(By.CSS_SELECTOR, target_selector)
+    current_count = len(current_jobs)
+    print(f"當前頁面職缺數量: {current_count}")
+    
+    for job in current_jobs[old_scrolls:]:
+        job_start_time = time.time()
         try:
-            # 獲取職缺名稱和連結
-            title_element = job.find_element(By.CSS_SELECTOR, 'h2 a.info-job__text')
+            job_count += 1
+            print(f"\n處理第 {job_count} 筆職缺")
+            print("-" * 50)
+            
+            # 使用顯式等待獲取職缺詳細資訊
+            title_element = WebDriverWait(driver, WAIT_TIMEOUT).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'h2 a.info-job__text'))
+            )
             job_url = title_element.get_attribute('href')
             job_name = title_element.get_attribute('title')
             print("職缺名稱:", job_name)
@@ -103,10 +127,14 @@ while scrolls < max_scrolls:
             print("公司名稱:", company)
             print("公司網址:", company_url)
             
-            # 開啟新分頁獲取詳細資訊
+            # 開啟新分頁
             driver.execute_script(f"window.open('{job_url}', '_blank')")
             driver.switch_to.window(driver.window_handles[-1])
-            time.sleep(3)
+            
+            # 等待詳細頁面載入
+            WebDriverWait(driver, WAIT_TIMEOUT).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'p.job-description__content'))
+            )
             
             # 處理詳細頁面的資訊
             try:
@@ -388,25 +416,31 @@ while scrolls < max_scrolls:
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
             
+            # 計算並顯示單筆職缺處理時間
+            job_end_time = time.time()
+            job_duration = job_end_time - job_start_time
+            print(f"處理時間: {job_duration:.2f} 秒")
+            
         except Exception as e:
             print(f"處理職缺時發生錯誤: {e}")
+            if len(driver.window_handles) > 1:
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
             continue
-
-        # 獲取終端寬度並打印分隔線
-        terminal_width = os.get_terminal_size().columns
-        print("=" * terminal_width)
     
     # 滾動到下一頁
-    old_scrolls = len
+    old_scrolls = current_count
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(2)
     
-    # 檢查是否有新職缺載入
-    new_jobs = driver.find_elements(By.CSS_SELECTOR, target_selector)
-    if len(new_jobs) == len(current_jobs):
+    # 等待新職缺載入
+    try:
+        WebDriverWait(driver, WAIT_TIMEOUT).until(
+            lambda driver: len(driver.find_elements(By.CSS_SELECTOR, target_selector)) > current_count
+        )
+    except TimeoutException:
         print("沒有新的職缺載入，可能已到底部")
         break
-        
+    
     scrolls += 1
 
 # 儲存更新後的資料
@@ -418,5 +452,16 @@ try:
     print("資料已更新並儲存至 104_jobs.csv")
 except Exception as e:
     print(f"儲存 CSV 檔案時發生錯誤: {e}")
+
+# 在程式結束前計算總執行時間
+end_time = time.time()
+total_duration = end_time - start_time
+hours = int(total_duration // 3600)
+minutes = int((total_duration % 3600) // 60)
+seconds = int(total_duration % 60)
+
+print(f"\n總執行時間: {hours}小時 {minutes}分鐘 {seconds}秒")
+print(f"總處理職缺數: {job_count} 筆")
+print(f"平均每筆職缺處理時間: {(total_duration/job_count):.2f} 秒")
 
 driver.quit()
