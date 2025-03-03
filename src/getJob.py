@@ -12,6 +12,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 from supabase import create_client
 from dotenv import load_dotenv
+import sys
 
 # 載入環境變數
 load_dotenv()
@@ -162,12 +163,17 @@ for search_keyword in keyword_list:
 
         # 處理尚未處理的新職缺
         for job in current_jobs[old_scrolls:]:
+            job_count += 1
+            print(f"\n處理第 {job_count} 筆職缺")
+            
+            # 加入這個判斷，只爬 10 個職缺
+            if job_count >= 10:
+                print("已達到 10 筆職缺上限，停止爬蟲")
+                driver.quit()
+                sys.exit(0)
+                
             job_start_time = time.time()
             try:
-                job_count += 1
-                print(f"\n處理第 {job_count} 筆職缺")
-                print("-" * 50)
-                
                 # ※關鍵修正：從目前的職缺區塊內相對查找職缺標題與網址
                 title_element = job.find_element(By.XPATH, './/h2//a[contains(@class, "info-job__text")]')
                 job_url = title_element.get_attribute('href')
