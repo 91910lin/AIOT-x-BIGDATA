@@ -17,12 +17,21 @@ import sys
 # 載入環境變數
 load_dotenv()
 
+# 檢查環境變數
+print("檢查環境變數:")
+print(f"SUPABASE_URL: {os.getenv('SUPABASE_URL')}")
+print(f"SUPABASE_KEY: {os.getenv('SUPABASE_ANON_KEY')}")
+
+# 確保環境變數存在
+if not os.getenv('SUPABASE_URL') or not os.getenv('SUPABASE_ANON_KEY'):
+    raise Exception("環境變數未設置。請確保 .env 檔案存在且包含必要的變數。")
+
 # Supabase 設定
 supabase_url = os.getenv("SUPABASE_URL")
-supabase_key = os.getenv("SUPABASE_KEY")
+supabase_key = os.getenv("SUPABASE_ANON_KEY")
 supabase = create_client(
-    "https://vijxlorrejpwltjnarfy.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpanhsb3JyZWpwd2x0am5hcmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk0NTI0ODcsImV4cCI6MjA1NTAyODQ4N30.JlWshs_HpOSRlL0u0ve1z2MGT4IrRsM9EE8znAblblA"
+    supabase_url,
+    supabase_key
 )
 
 # 設定 Selenium 選項

@@ -1,25 +1,50 @@
+import os
 from supabase import create_client
+from dotenv import load_dotenv
 
-# 使用 normalUser 登入
-supabase = create_client(
-    "https://vijxlorrejpwltjnarfy.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpanhsb3JyZWpwd2x0am5hcmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk0NTI0ODcsImV4cCI6MjA1NTAyODQ4N30.JlWshs_HpOSRlL0u0ve1z2MGT4IrRsM9EE8znAblblA"
-)
+load_dotenv()
 
-# 登入
-response = supabase.auth.sign_in_with_password({
-    "email": "normalUser1@gmail.com",
-    "password": "0000"
-})
+# 檢查環境變數
+supabase_url = os.getenv('SUPABASE_URL')
+supabase_key = os.getenv('SUPABASE_ANON_KEY')
 
-# 測試讀取
-response = supabase.table('jobs').select("*").limit(1).execute()
-print("讀取測試結果：", response.data)
+print("檢查環境變數:")
+print(f"SUPABASE_URL: {supabase_url}")
+print(f"SUPABASE_KEY: {supabase_key}")
 
-# 測試寫入（應該會失敗）
+# 初始化 Supabase 客戶端
+supabase = create_client(supabase_url, supabase_key)
+
 try:
-    response = supabase.table('jobs').insert({
-        "job_name": "test job"
-    }).execute()
+    # 先嘗試登入
+    print("\n嘗試登入...")
+    auth_response = supabase.auth.sign_in_with_password({
+        "email": "normaluser@gmail.com",
+        # "email": "no@test.com",
+        "password": "0000"
+    })
+    print("登入成功：", auth_response)
+
+    # 等待一下確保登入狀態已更新
+    import time
+    time.sleep(1)
+
+    # 嘗試讀取資料
+    print("\n嘗試讀取資料...")
+    data = supabase.table('jobs').select("*").limit(1).execute()
+    print("讀取成功：", data.data)
+
+    # 測試寫入（應該會失敗）
+    try:
+        response = supabase.table('jobs').insert({
+            "job_name": "test job"
+        }).execute()
+    except Exception as e:
+        print("預期中的錯誤：", e)
+
 except Exception as e:
-    print("預期中的錯誤：", e)
+    print(f"\n錯誤類型: {type(e)}")
+    print(f"錯誤訊息: {str(e)}")
+    import traceback
+    print("\n詳細錯誤:")
+    print(traceback.format_exc())
